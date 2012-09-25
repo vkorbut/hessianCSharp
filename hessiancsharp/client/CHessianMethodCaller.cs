@@ -53,6 +53,7 @@ using hessiancsharp.io;
 using System.Text;
 using System.Net.Sockets;
 using System.IO.Compression;
+using log4net;
 
 namespace hessiancsharp.client
 {
@@ -67,6 +68,8 @@ namespace hessiancsharp.client
         #endregion
 
 		#region CLASS_FIELDS
+
+	    private ILog log = LogManager.GetLogger(typeof (CHessianMethodCaller));
 		/// <summary>
 		/// Instance of the proxy factory
 		/// </summary>
@@ -144,8 +147,18 @@ namespace hessiancsharp.client
                 object result;
                 try
                 {
+                    if (log.IsDebugEnabled)
+                    {
+                        string[] methodArgs = arrMethodArgs == null? null : new String[arrMethodArgs.Length];
+                        if (methodArgs!=null)
+                            for (var i = 0; i < arrMethodArgs.Length; i++)
+                                methodArgs[i] = arrMethodArgs[i]==null?null:arrMethodArgs.ToString();
+                        string methodArgsStr = methodArgs == null ? "" : String.Join(",", methodArgs);
+                        log.Debug(string.Format("Sending request {0} ({1})", methodInfo, methodArgsStr));
+                    }
                     WebRequest webRequest = SendRequest(request, out sOutStream);
                     result = ReadReply(webRequest, methodInfo, out sInStream, out totalBytesRead);
+                    log.Debug(string.Format("response received for {0}: {1}", methodInfo, result));
                 }
                 catch (Exception e)
                 {
@@ -172,7 +185,8 @@ namespace hessiancsharp.client
                         }
                     }
                     else*/
-                        throw e; // rethrow
+                    log.Error("Failed to perform call ", e);
+                    throw e; // rethrow
                 }
 
                 CHessianLog.AddLogEntry(methodInfo.Name, start, DateTime.Now, totalBytesRead, request.Length);
